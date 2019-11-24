@@ -54,10 +54,10 @@ public class MainActivity extends AppCompatActivity {
     private static String TAG = "MainActivity";
 
     private static final int CAMERA_REQUEST = 123;
-    boolean hasCameraFlash = false;
-    boolean vibrateChecked, flashChecked, soundChecked;
+    private boolean hasCameraFlash = false;
+    private boolean vibrateChecked, flashChecked, soundChecked;
 
-    float feedbackSpeed = 1.0f;
+    private float feedbackSpeed = 1.0f;
 
     private boolean stopThread = false;
 
@@ -238,21 +238,25 @@ public class MainActivity extends AppCompatActivity {
         }
         char[] alphaText = alphaInput.getText().toString().trim().toCharArray();    //get and convert alphanum input of textbox to char array
         StringBuilder morseText = new StringBuilder();  //string builder for converting to morse text inside for loop
+        StringBuilder morseForFeedback = new StringBuilder();
         for(int i=0;i<alphaText.length;i++){
             if(alphaText[i] == ' '){
                 morseText.append("     ");
+                morseForFeedback.append("     ");
             } else {
                 String morseEquivalant = alphaToMorse.get(Character.toString(alphaText[i]).toLowerCase());
                 if(morseEquivalant!=null) {
                     morseText.append(morseEquivalant + " ");   //get morse code from hash map
+                    morseForFeedback.append(morseEquivalant + " ");
                 } else {
+                    morseText.append("?? ");
                     Toast.makeText(this, "Please enter valid symbols only.", Toast.LENGTH_SHORT).show();
                 }
             }
         }
         morseField.setText(morseText.toString());
         if(soundChecked || vibrateChecked || flashChecked){
-            deviceFeedbackThread feedbackThread = new deviceFeedbackThread(morseText.toString());
+            deviceFeedbackThread feedbackThread = new deviceFeedbackThread(morseForFeedback.toString().trim());
             new Thread(feedbackThread).start();
         }
 
