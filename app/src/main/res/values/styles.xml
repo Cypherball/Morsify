@@ -8,4 +8,15 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <style name="ToolbarStyle" parent="ThemeOverlay.MaterialComponents.Toolbar.Primary">
+        <item name="android:textColor">@color/colorText</item>
+        <item name="android:background">@color/colorPrimaryDark</item>
+    </style>
+
+    <style name="Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:background">@color/colorAccent</item>
+        <item name="rippleColor">@color/colorSecondary</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
 </resources>

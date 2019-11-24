@@ -1,3 +1,19 @@
 <resources>
     <string name="app_name">Morsify</string>
+    <string name="enter_text_here">Enter Text Here</string>
+    <string name="vibrate">Vibrate</string>
+    <string name="sound">Sound</string>
+    <string name="flash">Flash</string>
+    <string name="generated_morse_code">Generated Morse Code:</string>
+    <string name="convert">Convert</string>
+    <string name="_0_25x">0.25x</string>
+    <string name="_0_50x">0.50x</string>
+    <string name="_0_75x">0.75x</string>
+    <string name="_1x">1x</string>
+    <string name="_1_25x">1.25x</string>
+    <string name="_1_50x">1.50x</string>
+    <string name="_1_75x">1.75x</string>
+    <string name="speed">Speed:</string>
+    <string name="alpha_numeric_text_input">Alpha-Numeric Text Input:</string>
+    <string name="frequency_hz">Frequency(hz):</string>
 </resources>

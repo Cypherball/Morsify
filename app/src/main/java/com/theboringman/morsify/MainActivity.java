@@ -2,18 +2,29 @@ package com.theboringman.morsify;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,8 +34,6 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.HashMap;
 
-import static java.lang.Thread.sleep;
-
 public class MainActivity extends AppCompatActivity {
 
     private String[] ALPHA = {"a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z",
@@ -32,9 +41,12 @@ public class MainActivity extends AppCompatActivity {
             ".",",","?","'","!","/","(",")","&",":",";","=","+","-","_","\"","$","@"};
     private String[] MORSE = {"·−","−···","−·−·","−··","·","··−·","−−·","····","··","·−−−","−·−","·−··","−−","−·","−−−","·−−·","−−·−","·−·","···","−","··−","···−","·−−","−··−","−·−−","−−··","−−−−−","·−−−−","··−−−","···−−","····−","·····","−····","−−···","−−−··","−−−−·","·−·−·−","−−··−−","··−−··","·−−−−·","−·−·−−","−··−·","−·−−·","−·−−·−","·−···","−−−···","−·−·−·","−···−","·−·−·","−····−","··−−·−","·−··−·","···−··−","·−−·−·"};
     private HashMap<String,String> alphaToMorse = new HashMap<>();
+    private int frequency = 600;
 
+    private Toolbar mToolbar;
     private TextInputEditText alphaInput;
-    private TextView morseField;
+    private EditText frequencyInput;
+    private TextView morseField, copy;
     private MaterialButton convertButton;
     private SeekBar seekBar;
     private TextView[] speedValues;
@@ -44,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_REQUEST = 123;
     boolean hasCameraFlash = false;
     boolean vibrateChecked, flashChecked, soundChecked;
-    
+
     float feedbackSpeed = 1.0f;
 
     private boolean stopThread = false;
@@ -66,6 +78,43 @@ public class MainActivity extends AppCompatActivity {
                 } else{
                     convertToMorse();
                 }
+            }
+        });
+
+        copy.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String morseText = morseField.getText().toString();
+                if(!morseText.isEmpty()){
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = ClipData.newPlainText("Copied Morse Text", morseField.getText().toString());
+                    try{
+                        clipboard.setPrimaryClip(clip);
+                        Toast.makeText(MainActivity.this, "Copied!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e){e.printStackTrace();}
+                }
+            }
+        });
+
+        frequencyInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                String frequencyString = frequencyInput.getText().toString().trim();
+                if(!frequencyString.isEmpty()) {
+                    if (Integer.parseInt(frequencyString) < 45000 && Integer.parseInt(frequencyString) > 0) {
+                        frequency = Integer.parseInt(frequencyString);
+                    }
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
             }
         });
 
@@ -94,6 +143,13 @@ public class MainActivity extends AppCompatActivity {
         morseField = findViewById(R.id.morse_text);  //text view to display morse code
         convertButton = findViewById(R.id.button_convertToMorse);  //button to convert to morse or stop feedback thread
         seekBar = findViewById(R.id.speed_seekBar);  //feedback speed control seekbar
+        frequencyInput = findViewById(R.id.frequencyInput);
+        copy = findViewById(R.id.copy); //used as a copy button to copy morse text to clipboard
+        mToolbar = findViewById(R.id.home_toolbar);
+        setSupportActionBar(mToolbar);
+
+        morseField.setMovementMethod(new ScrollingMovementMethod());
+        alphaInput.requestFocus();
 
         //seekbar  text view values indicating discrete intervals
         TextView speedValue0 = findViewById(R.id.speed0);
@@ -106,15 +162,16 @@ public class MainActivity extends AppCompatActivity {
         speedValues = new TextView[]{speedValue0,speedValue1,speedValue2,speedValue3,speedValue4,speedValue5,speedValue6};
 
         //initial feedback speed seekbar setup
+        seekBar.setProgress(1);
         resetSelectedSpeedValue(speedValues);
         setSeekBarSelectedValue(speedValues);
         setFeedbackSpeed();
 
+        frequencyInput.setText("600");
+
         //get camera permission for enabling flash feedback
-        ActivityCompat.requestPermissions(MainActivity.this,
-                new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST);
-        hasCameraFlash = getPackageManager().
-                hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
+        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST);
+        hasCameraFlash = getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
 
         //initialize feedback options checkboxes
         CheckBox soundCheckbox = findViewById(R.id.soundCheckbox);
@@ -144,10 +201,10 @@ public class MainActivity extends AppCompatActivity {
                 feedbackSpeed = 1.25f;
                 break;
             case 5:
-                feedbackSpeed = 1.75f;
+                feedbackSpeed = 1.5f;
                 break;
             case 6:
-                feedbackSpeed = 2.0f;
+                feedbackSpeed = 1.75f;
                 break;
             default:
                 feedbackSpeed = 1.0f;
@@ -159,7 +216,8 @@ public class MainActivity extends AppCompatActivity {
     private void setSeekBarSelectedValue(TextView[] values) {
         int progress = seekBar.getProgress();
         if(progress > -1 && progress < 7){
-            values[progress].setTextSize(20);
+            values[progress].setTextSize(18);
+            values[progress].setTextColor(getColor(R.color.colorText));
         } else{
             Toast.makeText(this, "Error setting progress value.", Toast.LENGTH_SHORT).show();
             Log.d(TAG, "setSeekBarSelectedValue: Progress value exceeds or is below defined progress range");
@@ -169,12 +227,13 @@ public class MainActivity extends AppCompatActivity {
     private void resetSelectedSpeedValue(TextView[] values) {
         for(int i =0; i<values.length; i++){
             values[i].setTextSize(15);
+            values[i].setTextColor(Color.GRAY);
         }
     }
 
     private void convertToMorse() {
         if(alphaInput.getText().toString().trim().isEmpty()){   //Condition for empty textbox
-            Toast.makeText(this,"Please enter alphanumeric text!",Toast.LENGTH_SHORT);
+            Toast.makeText(this,"Please enter alphanumeric text!",Toast.LENGTH_SHORT).show();
             return;
         }
         char[] alphaText = alphaInput.getText().toString().trim().toCharArray();    //get and convert alphanum input of textbox to char array
@@ -183,7 +242,12 @@ public class MainActivity extends AppCompatActivity {
             if(alphaText[i] == ' '){
                 morseText.append("     ");
             } else {
-                morseText.append(alphaToMorse.get(Character.toString(alphaText[i]).toLowerCase()) + " ");   //get morse code from hash map
+                String morseEquivalant = alphaToMorse.get(Character.toString(alphaText[i]).toLowerCase());
+                if(morseEquivalant!=null) {
+                    morseText.append(morseEquivalant + " ");   //get morse code from hash map
+                } else {
+                    Toast.makeText(this, "Please enter valid symbols only.", Toast.LENGTH_SHORT).show();
+                }
             }
         }
         morseField.setText(morseText.toString());
@@ -207,6 +271,7 @@ public class MainActivity extends AppCompatActivity {
             String cameraId = cameraManager.getCameraIdList()[0];
             cameraManager.setTorchMode(cameraId, true);
         } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
     }
 
@@ -216,13 +281,15 @@ public class MainActivity extends AppCompatActivity {
             String cameraId = cameraManager.getCameraIdList()[0];
             cameraManager.setTorchMode(cameraId, false);
         } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
     }
 
     private class deviceFeedbackThread implements Runnable{
         String morseText;
-        float oneTimeUnit = 50.0f;
+        float oneTimeUnit = 100.0f;
 
+        //coded according to International Morse Code Standards
         float dotStandardTime = oneTimeUnit;
         float dashStandardTime = oneTimeUnit * 3;
         float symbolSpaceStandardWait = oneTimeUnit;
@@ -249,44 +316,23 @@ public class MainActivity extends AppCompatActivity {
             Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             boolean feedbackContinuationCondition = !stopThread && (flashChecked || soundChecked || vibrateChecked);
             convertButton.setText("Stop Feedback"); //set the button text to STOP
+
             for(int i=0; i<morseText.length() && feedbackContinuationCondition;i++){
+                //Adjust speed of feedback
                 dotFeedbackTime = (int) (dotStandardTime/feedbackSpeed);
                 dashFeedbackTime = (int) (dashStandardTime/feedbackSpeed);
                 symbolSpaceSleepTime = (int) (symbolSpaceStandardWait/feedbackSpeed);
                 letterSpaceSleepTime = (int) (letterSpaceStandardWait/feedbackSpeed);
                 wordSpaceSleepTime = (int) ((wordSpaceStandardWait/feedbackSpeed)/5);
 
+                //Feedback conditions
                 if(morseText.toCharArray()[i]=='·'){
-                    try {
-                        if(vibrateChecked) {v.vibrate(dotFeedbackTime);}
-                        if(hasCameraFlash && flashChecked){
-                            flashLightOn();
-                        }
-                        Thread.sleep(dotFeedbackTime);
-                        if(hasCameraFlash){
-                            flashLightOff();
-                        }
-                        Thread.sleep(letterSpaceSleepTime);
-                    } catch (Exception e){
-                        Log.e(TAG, "convertToMorse: " + e);
-                    }
+                    generateFeedbacks(dotFeedbackTime,symbolSpaceSleepTime);
                 } else if(morseText.toCharArray()[i]=='−'){
-                    try {
-                        if(vibrateChecked) v.vibrate(dashFeedbackTime);
-                        if(hasCameraFlash && flashChecked){
-                            flashLightOn();
-                        }
-                        Thread.sleep(dashFeedbackTime);
-                        if(hasCameraFlash){
-                            flashLightOff();
-                        }
-                        Thread.sleep(letterSpaceSleepTime);
-                    } catch (Exception e){
-                        Log.e(TAG, "convertToMorse: " + e);
-                    }
+                    generateFeedbacks(dashFeedbackTime,symbolSpaceSleepTime);
                 } else if(morseText.toCharArray()[i]==' '){
                     try {
-                        if(morseText.toCharArray()[i]!=' '){
+                        if(morseText.toCharArray()[i+1]!=' '){
                             Thread.sleep(letterSpaceSleepTime);
                         }
                         else{
@@ -305,8 +351,33 @@ public class MainActivity extends AppCompatActivity {
                 }
                 feedbackContinuationCondition = !stopThread && (flashChecked || soundChecked || vibrateChecked);
             }
-            if(!feedbackContinuationCondition){
-                convertButton.setText("Convert");
+            convertButton.setText("Convert");
+            Thread.currentThread().interrupt();
+        }
+
+        private void generateFeedbacks(int feedbackTime, int sleepTime){
+            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            try {
+                if(vibrateChecked) {v.vibrate(feedbackTime);}
+                if(hasCameraFlash && flashChecked){
+                    flashLightOn();
+                }
+                Thread toneThread;
+                PlayTone playTone = new PlayTone();
+                boolean soundOn = false;
+                if(soundChecked){
+                    toneThread = new Thread(playTone);
+                    toneThread.start();
+                    soundOn = true;
+                }
+                Thread.sleep(feedbackTime);
+                if(soundOn)
+                    playTone.stopTune();
+                if(hasCameraFlash)
+                    flashLightOff();
+                Thread.sleep(sleepTime);
+            } catch (Exception e){
+                Log.e(TAG, "convertToMorse: " + e);
             }
         }
 
@@ -314,6 +385,64 @@ public class MainActivity extends AppCompatActivity {
             stopThread = true;
         }
     }
+
+    public class PlayTone implements Runnable{
+        private boolean isRunning;
+        private int sampleRate = 44100;
+        private double toneFreq = frequency;
+        AudioTrack audioTrack;
+
+        @Override
+        public void run() {
+            isRunning = true;
+            int buffsize = AudioTrack.getMinBufferSize(sampleRate,
+                    AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT);
+            // create an audiotrack object
+            audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                    sampleRate, AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT, buffsize,
+                    AudioTrack.MODE_STREAM);
+
+            short samples[] = new short[buffsize];
+            int amp = 10000;
+            double twopi = 8.*Math.atan(1.);
+            double ph = 0.0;
+
+            // start audio
+            audioTrack.play();
+
+            // synthesis loop
+            while(isRunning){
+                double fr = toneFreq;
+                for(int i=0; i < buffsize; i++){
+                    samples[i] = (short) (amp*Math.sin(ph));
+                    ph += twopi*fr/ sampleRate;
+                }
+                audioTrack.write(samples, 0, buffsize);
+            }
+
+        }
+
+        public double getToneFreq() {
+            return toneFreq;
+        }
+
+        public void setToneFreq(double toneFreq) {
+            this.toneFreq = toneFreq;
+        }
+
+        public boolean isRunning() {
+            return isRunning;
+        }
+
+        private void stopTune() {
+            isRunning = false;
+            audioTrack.stop();
+            audioTrack.release();
+            Thread.currentThread().interrupt();
+        }
+    }
+
 
     public void checkboxClicked(View view){
         boolean checked = ((CheckBox) view).isChecked();
