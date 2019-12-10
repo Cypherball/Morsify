@@ -1,4 +1,7 @@
 # Morsify
+
+<h3>LINK TO APK: <a href="https://drive.google.com/open?id=1r7m2mdnQjDBeOmWbl7y3Y2C6YU7NyEqV">Click Here</a></h2>
+
 <b>An android app for converting alpha numeric text to morse code (also with feedbacks like vibration, sound and flash).</b>
             
 •	The app is called Morsify. It is developed in Android Studio 3.5.<br>
@@ -12,3 +15,5 @@ The user can select one or more (or none) of the feedbacks. The result is that w
 •	Below and to  the right of Morse Code Text Field is a Button named “Copy”, which copies the generated morse code to your phone’s clipboard.<br>
 •	The bottom most part of the UI houses the “CONVERT” Button. It is used to convert the input text into morse and generate the selected feedbacks. If a feedback thread is already running, the button will be converted to “Stop Feedbacks”, which will terminate the current feedback generation thread. <br>
 You can also stop running feedback generation thread by de-selecting the various feedback checkboxes.<br><br>
+
+<h3>LINK TO APK: <a href="https://drive.google.com/open?id=1r7m2mdnQjDBeOmWbl7y3Y2C6YU7NyEqV">Click Here</a></h2>
